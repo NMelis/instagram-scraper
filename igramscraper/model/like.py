@@ -1,8 +1,7 @@
 class Like:
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.identifier = None
-        self.username = None
         self.comment_id = kwargs.get('id', None)
         self.username = kwargs.get('username', None)
         self.full_name = kwargs.get('full_name', None)
