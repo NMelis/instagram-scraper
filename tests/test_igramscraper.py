@@ -1,11 +1,11 @@
 import unittest
-from unittest.mock import patch
-from test_data import username, password, user_agent
+from .test_data import username, password, user_agent
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     
 from igramscraper.instagram import Instagram
+
 
 class TestIgramscraper(unittest.TestCase):
 
@@ -58,6 +58,10 @@ class TestIgramscraper(unittest.TestCase):
         media = self.instagram.get_media_by_url('https://www.instagram.com/p/BHaRdodBouH')
         self.assertEqual('kevin', media.owner.username)
     
+    def test_get_media_likes_by_code(self):
+        media = self.instagram.get_media_likes_by_code('BHaRdodBouH', 10)
+        self.assertEqual(10, len(media['likes']))
+        self.assertTrue(len(media['likes'][0].username))
 
 
 if __name__ == '__main__':
