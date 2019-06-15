@@ -18,7 +18,7 @@ GENERAL_SEARCH = 'https://www.instagram.com/web/search/topsearch/?query={query}'
 ACCOUNT_JSON_INFO_BY_ID = 'ig_user({userId}){id,username,external_url,full_name,profile_pic_url,biography,followed_by{count},follows{count},media{count},is_private,is_verified}'
 COMMENTS_BEFORE_COMMENT_ID_BY_CODE = 'https://www.instagram.com/graphql/query/?query_hash=33ba35852cb50da46f5b5e889df7d159&variables={variables}'
 LAST_LIKES_BY_CODE = 'ig_shortcode({{code}}){likes{nodes{id,user{id,profile_pic_url,username,follows{count},followed_by{count},biography,full_name,media{count},is_private,external_url,is_verified}},page_info}}'
-LIKES_BY_SHORTCODE = 'https://www.instagram.com/graphql/query/?query_id=17864450716183058&variables={"shortcode":"{{shortcode}}","first":{{count}},"after":"{{likeId}}"}'
+LIKES_BY_SHORTCODE = 'https://www.instagram.com/graphql/query/?query_id=17864450716183058&variables={"shortcode":"{{shortcode}}","first":{{count}},"after":{{likeId}}}'
 FOLLOWING_URL = 'https://www.instagram.com/graphql/query/?query_id=17874545323001329&id={{accountId}}&first={{count}}&after={{after}}'
 FOLLOWERS_URL = 'https://www.instagram.com/graphql/query/?query_id=17851374694183129&id={{accountId}}&first={{count}}&after={{after}}'
 FOLLOW_URL = 'https://www.instagram.com/web/friendships/{{accountId}}/follow/'
@@ -95,11 +95,14 @@ def get_last_likes_by_code_link(code):
     return LAST_LIKES_BY_CODE.replace('{{code}}', urllib.parse.quote_plus(code))
 
 
-def get_last_likes_by_code(code, count, lastLikeID):
+def get_last_likes_by_code(code, count, last_like_id):
     url = LIKES_BY_SHORTCODE.replace(
         '{{shortcode}}', urllib.parse.quote_plus(code))
     url = url.replace('{{count}}', urllib.parse.quote_plus(str(count)))
-    url = url.replace('{{likeId}}', urllib.parse.quote_plus(str(lastLikeID)))
+    if not last_like_id:
+        url = url.replace('{{likeId}}', 'null')
+    else:
+        url = url.replace('{{likeId}}', '"{}"'.format(last_like_id))
 
     return url
 

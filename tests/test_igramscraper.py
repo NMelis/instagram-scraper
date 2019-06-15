@@ -58,6 +58,10 @@ class TestIgramscraper(unittest.TestCase):
         media = self.instagram.get_media_by_url('https://www.instagram.com/p/BHaRdodBouH')
         self.assertEqual('kevin', media.owner.username)
     
+    def test_get_media_likes_by_code(self):
+        media = self.instagram.get_media_likes_by_code('BHaRdodBouH', 10)
+        self.assertEqual(10, len(media['likes']))
+        self.assertTrue(len(media['likes'][0].username))
 
 
 if __name__ == '__main__':

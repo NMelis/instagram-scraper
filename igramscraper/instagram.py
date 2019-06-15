@@ -7,6 +7,7 @@ import hashlib
 import os
 from slugify import slugify
 
+from igramscraper.model.like import Like
 from .session_manager import CookieSessionManager
 
 from .exception.instagram_auth_exception import InstagramAuthException
@@ -799,65 +800,64 @@ class Instagram:
         return Location(json_response['graphql']['location'])
 
     def get_media_likes_by_code(self, code, count=10, max_id=None):
+        """Get likes media by code.
+        :param code
+        :param count
+        :param max_id
+
+        :return dict
+        :exception InstagramException
         """
-        param      code
-        param int count
-        param null maxId
+        remain = count
+        likes = []
+        index = 0
+        has_previous = True
 
-        return array
-        throws InstagramException
-        """
-        pass
-        # TODO implement
-        # remain = count
-        # likes = []
-        # index = 0
-        # hasPrevious = True
-        # #TODO: $index < $count (bug index getting to high since max_likes_per_request gets sometimes changed by instagram)
-        # while (hasPrevious and index < count):
-        #     if (remain > self.MAX_LIKES_PER_REQUEST):
-        #         numberOfLikesToRetreive = self.MAX_LIKES_PER_REQUEST
-        #         remain -= self.MAX_LIKES_PER_REQUEST
-        #         index += self.MAX_LIKES_PER_REQUEST
-        #     else:
-        #         numberOfLikesToRetreive = remain
-        #         index += remain
-        #         remain = 0
+        while has_previous and index < count:
+            if remain > self.MAX_LIKES_PER_REQUEST:
+                number_of_likes_to_retreive = self.MAX_LIKES_PER_REQUEST
+                remain -= self.MAX_LIKES_PER_REQUEST
+                index += self.MAX_LIKES_PER_REQUEST
+            else:
+                number_of_likes_to_retreive = remain
+                index += remain
+                remain = 0
 
-        #     if (maxId != None):
-        #         maxId = ''
+            comments_url = endpoints.get_last_likes_by_code(code,
+                                                           number_of_likes_to_retreive,
+                                                           max_id)
+            time.sleep(self.sleep_between_requests)
+            response = self.__req.get(comments_url,
+                                      headers=self.generate_headers(
+                                          self.user_session))
+            if not response.status_code == Instagram.HTTP_OK:
+                raise InstagramException(
+                    f'Response code is {response.status_code}. '
+                    f'Body: {response.text} Something went wrong.'
+                    f' Please report issue.',
+                    response.status_code)
 
-        #     commentsUrl = endpoints.getLastLikesByCode(code, numberOfLikesToRetreive, maxId)
-        time.sleep(self.sleep_between_requests)
-        #     response = self.__req.get(commentsUrl, headers=self.generateHeaders(self.userSession))
+            json_response = response.json()
+            nodes = json_response['data']['shortcode_media']['edge_liked_by'][
+                'edges']
 
-        #     if (response.status_code != Instagram.HTTP_OK):
-        #         raise InstagramException(f'Response code is {response.status_code}. Body: {response.text} Something went wrong. Please report issue.', response.status_code)
+            for like in nodes:
+                likes.append(Like(**like['node']))
 
-        #     jsonResponse = response.json()
-        #     print(jsonResponse)
-        #     exit()
+            has_previous = json_response['data']['shortcode_media']['edge_liked_by']['page_info']['has_next_page']
+            number_of_likes = json_response['data']['shortcode_media']['edge_liked_by']['count']
+            if count > number_of_likes:
+                count = number_of_likes
 
-        #     $nodes = $jsonResponse['data']['shortcode_media']['edge_liked_by']['edges'];
+            if len(nodes) == 0:
+                return likes
 
-        #     foreach ($nodes as $likesArray) {
-        #         $likes[] = Like::create($likesArray['node']);
-        #     }
+            max_id = json_response['data']['shortcode_media']['edge_liked_by']['page_info']['end_cursor']
 
-        #     $hasPrevious = $jsonResponse['data']['shortcode_media']['edge_liked_by']['page_info']['has_next_page'];
-        #     $numberOfLikes = $jsonResponse['data']['shortcode_media']['edge_liked_by']['count'];
-        #     if ($count > $numberOfLikes) {
-        #         $count = $numberOfLikes;
-        #     }
-        #     if (sizeof($nodes) == 0) {
-        #         return $likes;
-        #     }
-        #     $maxId = $jsonResponse['data']['shortcode_media']['edge_liked_by']['page_info']['end_cursor'];
-
-        # data['next_page'] = maxId
-        # data['likes'] = likes
-
-        # return data
+        return {
+            'next_page': max_id,
+            'likes': likes
+        }
 
     def get_followers(self, account_id, count=20, page_size=20, end_cursor='',
                       delayed=True):
@@ -1127,7 +1127,8 @@ class Instagram:
 
         user_array = Instagram.extract_shared_data_from_body(response.text)
 
-        if user_array['entry_data']['ProfilePage'][0]['graphql']['user'] is None:
+        if user_array['entry_data']['ProfilePage'][0]['graphql'][
+            'user'] is None:
             raise InstagramNotFoundException(
                 'Account with this username does not exist')
 
@@ -1498,9 +1499,11 @@ class Instagram:
         return Comment
         throws InstagramException
         """
-        media_id = media_id.identifier if isinstance(media_id, Media) else media_id
-        
-        replied_to_comment_id = replied_to_comment_id._data['id'] if isinstance(replied_to_comment_id, Comment) else replied_to_comment_id
+        media_id = media_id.identifier if isinstance(media_id,
+                                                     Media) else media_id
+
+        replied_to_comment_id = replied_to_comment_id._data['id'] if isinstance(
+            replied_to_comment_id, Comment) else replied_to_comment_id
 
         body = {'comment_text': text,
                 'replied_to_comment_id': replied_to_comment_id
