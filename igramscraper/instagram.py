@@ -53,9 +53,16 @@ class Instagram:
         self.user_session = None
         self.rhx_gis = None
         self.sleep_between_requests = sleep_between_requests
-        self.user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) ' \
-                          'AppleWebKit/537.36 (KHTML, like Gecko) ' \
-                          'Chrome/66.0.3359.139 Safari/537.36'
+        self.set_user_agent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) '
+                            'AppleWebKit/537.36 (KHTML, like Gecko) '
+                            'Chrome/66.0.3359.139 Safari/537.36')
+
+    def set_user_agent(self, user_agent):
+        if not user_agent:
+            raise Exception('You do not set correctly string user_agent')
+        self.__req.headers.update({
+            'User-Agent': user_agent,
+        })
 
     @staticmethod
     def with_credentials(username, password, session_folder=None):
@@ -147,7 +154,8 @@ class Instagram:
 
         return json_response['user']['username']
 
-    def generate_headers(self, session, gis_token=None):
+    @staticmethod
+    def generate_headers(session, gis_token=None):
         """
         @param $session
         @param $gisToken
@@ -169,11 +177,8 @@ class Instagram:
                 'x-csrftoken': csrf
             }
 
-        if self.user_agent is not None:
-            headers['user-agent'] = self.user_agent
-
-            if gis_token is not None:
-                headers['x-instagram-gis'] = gis_token
+        if gis_token is not None:
+            headers['x-instagram-gis'] = gis_token
 
         return headers
 
@@ -1305,7 +1310,6 @@ class Instagram:
             'referer': endpoints.BASE_URL + '/',
             'x-csrftoken': csrf_token,
             'X-CSRFToken': csrf_token,
-            'user-agent': self.user_agent,
         }
 
         time.sleep(self.sleep_between_requests)
@@ -1365,7 +1369,6 @@ class Instagram:
                 'referer': endpoints.BASE_URL + '/',
                 'x-csrftoken': csrfToken,
                 'X-CSRFToken': csrfToken,
-                'user-agent': self.user_agent,
             }
             payload = {'username': self.session_username,
                        'password': self.session_password}
@@ -1426,7 +1429,6 @@ class Instagram:
             'cookie': cookie_string,
             'referer': endpoints.LOGIN_URL,
             'x-csrftoken': cookies['csrftoken'],
-            'user-agent': self.user_agent,
         }
 
         url = endpoints.BASE_URL + response.json()['checkpoint_url']
