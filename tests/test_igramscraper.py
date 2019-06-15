@@ -1,9 +1,6 @@
 import unittest
 from .test_data import username, password, user_agent
 import os
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    
 from igramscraper.instagram import Instagram
 
 
@@ -11,18 +8,16 @@ class TestIgramscraper(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
-
         cwd = os.getcwd()
         session_folder = cwd + os.path.sep + 'sessions' + os.path.sep
-        if username == None or password == None:
+        if None not in [username, password]:
             self.instagram = Instagram()
         else:
             self.instagram = Instagram.with_credentials(username, password, session_folder)
             self.instagram.login()
         
-        if user_agent != None:
-            #TODO set user agent
-            pass
+        if user_agent is not None:
+            self.instagram.set_user_agent(user_agent)
 
     @classmethod
     def tearDownClass(self):
