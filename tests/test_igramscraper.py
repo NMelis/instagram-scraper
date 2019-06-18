@@ -13,7 +13,8 @@ class TestIgramscraper(unittest.TestCase):
         if None not in [username, password]:
             self.instagram = Instagram()
         else:
-            self.instagram = Instagram.with_credentials(username, password, session_folder)
+            self.instagram = Instagram()
+            self.instagram.with_credentials(username, password, session_folder)
             self.instagram.login()
         
         if user_agent is not None:

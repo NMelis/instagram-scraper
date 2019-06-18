@@ -1,5 +1,4 @@
 import time
-
 import requests
 import re
 import json
@@ -7,24 +6,11 @@ import hashlib
 import os
 from slugify import slugify
 
-from igramscraper.model.like import Like
-from .session_manager import CookieSessionManager
-
-from .exception.instagram_auth_exception import InstagramAuthException
-from .exception.instagram_exception import InstagramException
-from .exception.instagram_not_found_exception import InstagramNotFoundException
-
-from .model.account import Account
-from .model.comment import Comment
-from .model.location import Location
-from .model.media import Media
-from .model.story import Story
-from .model.user_stories import UserStories
-from .model.tag import Tag
-
+from igramscraper.model import Account, Media, Tag, Like, Location, Story, Comment, CarouselMedia, UserStories 
+from igramscraper.exception import InstagramException, InstagramAuthException, InstagramNotFoundException
+from igramscraper.two_step_verification import ConsoleVerification
 from igramscraper import endpoints
-
-from .two_step_verification.console_verification import ConsoleVerification
+from igramscraper.session_manager import CookieSessionManager
 
 
 class Instagram:
@@ -64,8 +50,7 @@ class Instagram:
             'User-Agent': user_agent,
         })
 
-    @staticmethod
-    def with_credentials(username, password, session_folder=None):
+    def with_credentials(self, username, password, session_folder=None):
         """
         param string username
         param string password
@@ -90,11 +75,8 @@ class Instagram:
 
         Instagram.instance_cache.empty_saved_cookies()
 
-        instance = Instagram()
-        instance.session_username = username
-        instance.session_password = password
-
-        return instance
+        self.session_username = username
+        self.session_password = password
 
     def set_proxies(self, proxy):
         if proxy and isinstance(proxy, dict):
@@ -189,7 +171,7 @@ class Instagram:
         throws InstagramException
         """
         rhx_gis = self.__get_rhx_gis() if self.__get_rhx_gis() != None else 'NULL'
-        string_to_hash = ':'.join([rhx_gis, json.dumps(variables)])
+        string_to_hash = ':'.join([rhx_gis, json.dumps(variables, separators=(',', ':'))])
         return hashlib.md5(string_to_hash.encode('utf-8')).hexdigest()
 
     def __get_rhx_gis(self):
@@ -248,7 +230,6 @@ class Instagram:
 
         return None
 
-    @staticmethod
     def search_tags_by_tag_name(self, tag):
         """
         param string tag
@@ -278,9 +259,7 @@ class Instagram:
                     'Response code is not equal 200. '
                     'Something went wrong. Please report issue.')
         except KeyError:
-            raise InstagramException(
-                'Response code is not equal 200.'
-                ' Something went wrong. Please report issue.')
+            raise InstagramException('Response code is not equal 200. Something went wrong. Please report issue.')
 
         try:
             hashtags_raw = json_response['hashtags']
@@ -533,8 +512,6 @@ class Instagram:
             has_next_page = \
                 arr['graphql']['hashtag']['edge_hashtag_to_media']['page_info'][
                     'has_next_page']
-            print('maxId:', max_id)
-            print('hasNextPage:', has_next_page)
 
         return medias
 
@@ -587,7 +564,6 @@ class Instagram:
                 arr['graphql']['location']['edge_location_to_media'][
                     'page_info'][
                     'end_cursor']
-            print(has_next_page, end_cursor)
 
         return medias
 
@@ -646,7 +622,7 @@ class Instagram:
                                              response.status_code)
 
         json_response = response.json()
-        # print(response.json())
+
         nodes = \
             json_response['graphql']['location']['edge_location_to_top_posts'][
                 'edges']
@@ -681,7 +657,7 @@ class Instagram:
             'id': str(account.identifier),
             'first': str(endpoints.request_media_count),
             'after': str(max_id)
-        })
+        }, separators=(',', ':'))
 
         time.sleep(self.sleep_between_requests)
         response = self.__req.get(
@@ -701,9 +677,6 @@ class Instagram:
         except KeyError:
             return to_return
 
-        # if (count($arr['items']) === 0) {
-        # I generally use empty. Im not sure why people would use count really - If the array is large then count takes longer/has more overhead.
-        # If you simply need to know whether or not the array is empty then use empty.
         for mediaArray in nodes:
             medias.append(Media(mediaArray['node']))
 
@@ -893,7 +866,6 @@ class Instagram:
 
         while True:
             next_page = None
-            print(self.is_logged_in(self.user_session))
             time.sleep(self.sleep_between_requests)
             response = self.__req.get(
                 endpoints.get_followers_json_link(account_id, page_size,
@@ -1070,7 +1042,7 @@ class Instagram:
                 'shortcode': str(code),
                 'first': str(number_of_comments_to_receive),
                 'after': str(max_id)
-            })
+            }, separators=(',', ':'))
 
             comments_url = endpoints.get_comments_before_comments_id_by_code(
                 variables)
@@ -1400,7 +1372,7 @@ class Instagram:
             cookies = response.cookies.get_dict()
 
             cookies['mid'] = mid
-            Instagram.instance_cache.set_saved_cookies(json.dumps(cookies))
+            Instagram.instance_cache.set_saved_cookies(json.dumps(cookies, separators=(',', ':')))
 
             self.user_session = cookies
 
@@ -1622,7 +1594,7 @@ class Instagram:
             if username is None:
                 username = self.get_username_by_id(user_id)
             try:
-                follow = self.__req.post(url_follow,
+                follow = self.__req.post(url,
                                          headers=self.generate_headers(
                                              self.user_session))
                 if follow.status_code == Instagram.HTTP_OK:
